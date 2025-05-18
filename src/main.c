@@ -91,19 +91,19 @@ main(int32_t argc, char *argv[])
         exit(1);
     }
 
-    Bus bus = {};
-    bus.rom = &rom;
+    Mmu mmu = {};
+    mmu.rom = &rom;
 
     Cpu cpu = {};
-    cpu.bus = &bus;
-    cpu_reset(&cpu);
+    cpu.mmu = &mmu;
+    cpu_init(&cpu);
 
     Ppu ppu = {};
-    ppu.bus = &bus;
+    ppu.mmu = &mmu;
 
     Nes nes = {};
     nes.rom = &rom;
-    nes.bus = &bus;
+    nes.mmu = &mmu;
     nes.cpu = &cpu;
     nes.ppu = &ppu;
 

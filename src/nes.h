@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "rom.h"
-#include "bus.h"
+#include "mmu.h"
 #include "cpu.h"
 #include "ppu.h"
 
@@ -15,7 +15,7 @@ typedef struct Nes Nes;
 struct Nes
 {
     Rom *rom;
-    Bus *bus;
+    Mmu *mmu;
     Cpu *cpu;
     Ppu *ppu;
 };

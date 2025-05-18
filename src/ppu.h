@@ -1,12 +1,12 @@
 #ifndef PPU_H
 #define PPU_H
 
-#include "bus.h"
+#include "mmu.h"
 
 typedef struct Ppu Ppu;
 struct Ppu
 {
-    Bus *bus;
+    Mmu *mmu;
 };
 
 #endif //PPU_H
