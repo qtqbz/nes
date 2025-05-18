@@ -14,10 +14,10 @@
 typedef struct Nes Nes;
 struct Nes
 {
-    Rom *rom;
-    Mmu *mmu;
-    Cpu *cpu;
-    Ppu *ppu;
+    Rom rom;
+    Mmu mmu;
+    Cpu cpu;
+    Ppu ppu;
 };
 
 void nes_display_update(Arena *arena, Nes *nes, uint32_t *pixels);

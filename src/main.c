@@ -85,27 +85,23 @@ main(int32_t argc, char *argv[])
     uint8_t *arenaBuf = (uint8_t *)malloc(arenaBufCap);
     Arena permArena = arena_make(arenaBuf, arenaBufCap);
 
-    Rom rom = {};
-    if (!rom_load(&permArena, &rom, romPath)) {
+    Nes nes = {};
+
+    Rom *rom = &nes.rom;
+    if (!rom_load(&permArena, rom, romPath)) {
         fprintf(stderr, "Failed to load ROM: %.*s\n", STR8_VARG(romPath));
         exit(1);
     }
 
-    Mmu mmu = {};
-    mmu.rom = &rom;
+    Mmu *mmu = &nes.mmu;
+    mmu->rom = rom;
 
-    Cpu cpu = {};
-    cpu.mmu = &mmu;
-    cpu_init(&cpu);
+    Cpu *cpu = &nes.cpu;
+    cpu->mmu = mmu;
+    cpu_init(cpu);
 
-    Ppu ppu = {};
-    ppu.mmu = &mmu;
-
-    Nes nes = {};
-    nes.rom = &rom;
-    nes.mmu = &mmu;
-    nes.cpu = &cpu;
-    nes.ppu = &ppu;
+    Ppu *ppu = &nes.ppu;
+    ppu->mmu = mmu;
 
     uint64_t targetFrameDurationMs = 1000 / FPS;
 
