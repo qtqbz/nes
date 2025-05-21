@@ -20,6 +20,7 @@ struct Nes
     Ppu ppu;
 };
 
+bool nes_init(Arena *arena, Nes *nes, Str8 romPath);
 void nes_display_update(Arena *arena, Nes *nes, uint32_t *pixels);
 
 #endif //NES_H

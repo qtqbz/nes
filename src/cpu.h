@@ -95,7 +95,7 @@ enum CpuAddressingMode
     CPU_ADDRESSING_MODE_COUNT
 };
 
-void cpu_init(Cpu *cpu);
+bool cpu_init(Cpu *cpu);
 void cpu_tick(Cpu *cpu);
 void cpu_interrupt(Cpu *cpu, CpuInterruptType type);
 

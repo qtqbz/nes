@@ -979,7 +979,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
     return cycleCount;
 }
 
-void
+bool
 cpu_init(Cpu *cpu)
 {
     cpu->a = 0;
@@ -992,6 +992,8 @@ cpu_init(Cpu *cpu)
 
     cpu->pc = mmu_cpu_read16(cpu->mmu, CPU_RES_ADDR_LO);
     cpu->sp = 0xFD; // As if the stack was initialized to $00, and then a RESET was performed (e.g. $00 - 3 = $FD).
+
+    return true;
 }
 
 void

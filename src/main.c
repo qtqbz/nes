@@ -86,22 +86,10 @@ main(int32_t argc, char *argv[])
     Arena permArena = arena_make(arenaBuf, arenaBufCap);
 
     Nes nes = {};
-
-    Rom *rom = &nes.rom;
-    if (!rom_load(&permArena, rom, romPath)) {
-        fprintf(stderr, "Failed to load ROM: %.*s\n", STR8_VARG(romPath));
+    if (!nes_init(&permArena, &nes, romPath)) {
+        fprintf(stderr, "Failed to initialize NES\n");
         exit(1);
     }
-
-    Mmu *mmu = &nes.mmu;
-    mmu->rom = rom;
-
-    Cpu *cpu = &nes.cpu;
-    cpu->mmu = mmu;
-    cpu_init(cpu);
-
-    Ppu *ppu = &nes.ppu;
-    ppu->mmu = mmu;
 
     uint64_t targetFrameDurationMs = 1000 / FPS;
 
