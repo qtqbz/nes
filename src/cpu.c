@@ -145,11 +145,17 @@ handle_interrupt(Cpu *cpu)
     switch (cpu->interrupt) {
         case RES: {
             cpu->sp -= 3;
-            addr = CPU_RES_ADDR_HI;
+            addr = CPU_RES_ADDR_LO;
         } break;
-        case NMI: addr = CPU_NMI_ADDR_LO; break;
-        case IRQ: addr = CPU_RES_ADDR_LO; break;
-        default: UNREACHABLE();
+        case NMI: {
+            addr = CPU_NMI_ADDR_LO;
+        } break;
+        case IRQ: {
+            addr = CPU_IRQ_ADDR_LO;
+        } break;
+        default: {
+            UNREACHABLE();
+        }
     }
     cpu->pc = mmu_cpu_read16(cpu->mmu, addr);
 
