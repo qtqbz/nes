@@ -70,7 +70,7 @@ str8_is_equal(Str8 a, Str8 b, StrEqualsFlags flags)
 
     if (a.length == b.length) {
         isEqual = true;
-        bool isCaseInsensitive = flags & CaseInsensitive;
+        bool isCaseInsensitive = flags & CASE_INSENSITIVE;
         for (int32_t i = 0; i < a.length; i++) {
             uint8_t ca = a.bytes[i];
             uint8_t cb = b.bytes[i];

@@ -41,7 +41,7 @@ struct Str8List
 typedef int32_t StrEqualsFlags;
 enum StrEqualsFlags
 {
-    CaseInsensitive = (1 << 0),
+    CASE_INSENSITIVE = (1 << 0),
 };
 
 bool char_is_lower(uint8_t c);
