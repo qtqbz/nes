@@ -10,7 +10,8 @@ EXE := $(BINDIR)/nes
 
 CC := gcc
 CFLAGS := -DBUILD_DEBUG \
-		  -lm -lSDL3 \
+		  -lm \
+		  -lSDL3 \
 		  -std=c23 \
 		  -g3 \
 		  -pedantic \
