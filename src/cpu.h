@@ -5,6 +5,7 @@
 
 #include "utils.h"
 #include "mmu.h"
+#include "str8.h"
 
 #define CPU_STACK_ADDR_OFFSET 0x0100
 
@@ -57,23 +58,11 @@ enum CpuInstructionCode
     RTS, SBC, SEC, SED, SEI, STA, STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
 
     // unofficial
-    ALR, ANC, ANE, ARR, DCP, ISC, JAM, LAS, LAX, LXA, RLA, RRA, SAX, SBX,
+    ALR, ANC, ANE, ARR, DCP, ISB, JAM, LAS, LAX, LXA, RLA, RRA, SAX, SBX,
     SHA, SHX, SHY, SLO, SRE, TAS, USB,
 
     CPU_INSTRUCTION_CODE_COUNT
 };
-
-// global const char *CpuInstructionCodeNames[CPU_INSTRUCTION_CODE_COUNT] = {
-//     // official
-//     "ADC", "AND", "ASL", "BCC", "BCS", "BEQ", "BIT", "BMI", "BNE", "BPL", "BRK", "BVC", "BVS", "CLC",
-//     "CLD", "CLI", "CLV", "CMP", "CPX", "CPY", "DEC", "DEX", "DEY", "EOR", "INC", "INX", "INY", "JMP",
-//     "JSR", "LDA", "LDX", "LDY", "LSR", "NOP", "ORA", "PHA", "PHP", "PLA", "PLP", "ROL", "ROR", "RTI",
-//     "RTS", "SBC", "SEC", "SED", "SEI", "STA", "STX", "STY", "TAX", "TAY", "TSX", "TXA", "TXS", "TYA",
-//
-//     // unofficial
-//     "ALR", "ANC", "ANE", "ARR", "DCP", "ISC", "JAM", "LAS", "LAX", "LXA", "RLA", "RRA", "SAX", "SBX",
-//     "SHA", "SHX", "SHY", "SLO", "SRE", "TAS", "USB",
-// };
 
 typedef int32_t CpuAddressingMode;
 enum CpuAddressingMode
@@ -98,5 +87,6 @@ enum CpuAddressingMode
 bool cpu_init(Cpu *cpu);
 void cpu_tick(Cpu *cpu);
 void cpu_interrupt(Cpu *cpu, CpuInterruptType type);
+Str8 cpu_sprint(Arena *arena, Cpu *cpu);
 
 #endif //CPU_H

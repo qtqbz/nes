@@ -38,5 +38,7 @@ struct Rom
 };
 
 bool rom_load(Arena *arena, Rom *rom, Str8 path);
+uint8_t rom_read(Rom *rom, uint16_t addr);
+void rom_write(Rom *rom, uint16_t addr, uint8_t value);
 
 #endif //ROM_H

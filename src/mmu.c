@@ -14,7 +14,7 @@ mmu_cpu_read(Mmu *mmu, uint16_t addr)
         // IO registers
     }
     else {
-        // ROM
+        result = rom_read(mmu->rom, addr);
     }
     return result;
 }
@@ -23,14 +23,7 @@ uint16_t
 mmu_cpu_read16(Mmu *mmu, uint16_t addr)
 {
     uint8_t lo = mmu_cpu_read(mmu, addr);
-    uint8_t hi;
-    if ((addr & 0x00FF) == 0x00FF) {
-        // HW bug when the page boundary is crossed
-        hi = mmu_cpu_read(mmu, addr & 0xFF00);
-    }
-    else {
-        hi = mmu_cpu_read(mmu, addr + 1);
-    }
+    uint8_t hi = mmu_cpu_read(mmu, addr + 1);
     uint16_t result = (uint16_t)((hi << 8) | lo);
     return result;
 }
@@ -48,7 +41,7 @@ mmu_cpu_write(Mmu *mmu, uint16_t addr, uint8_t value)
         // IO registers
     }
     else {
-        // ROM
+        rom_write(mmu->rom, addr, value);
     }
 }
 

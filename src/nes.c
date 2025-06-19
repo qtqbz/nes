@@ -1,5 +1,7 @@
 #include "nes.h"
 
+#include <stdio.h>
+
 bool
 nes_init(Arena *arena, Nes *nes, Str8 romPath)
 {
@@ -26,5 +28,9 @@ nes_init(Arena *arena, Nes *nes, Str8 romPath)
 void
 nes_display_update(Arena *arena, Nes *nes, uint32_t *pixels)
 {
+    if (nes->cpu.pendingCycleCount == 0) {
+        Str8 cpuState = cpu_sprint(arena, &nes->cpu);
+        printf("%*s\n", STR8_VARG(cpuState));
+    }
     cpu_tick(&nes->cpu);
 }

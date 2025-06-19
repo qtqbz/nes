@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "utils.h"
 #include "cpu.h"
 
@@ -78,14 +80,26 @@ global CpuInstructionEncoding instructionEncodings[256] = {
         {NOP, ZPX, 4}, {CMP, ZPX, 4}, {DEC, ZPX, 6}, {DCP, ZPX, 6}, // $D4-$D7
         {CLD, IMP, 2}, {CMP, ABY, 4}, {NOP, IMP, 2}, {DCP, ABY, 7}, // $D8-$DB
         {NOP, ABX, 4}, {CMP, ABX, 4}, {DEC, ABX, 7}, {DCP, ABX, 7}, // $DC-$DF
-        {CPX, IMM, 2}, {SBC, IDX, 6}, {NOP, IMM, 2}, {ISC, IDX, 8}, // $E0-$E3
-        {CPX, ZPG, 3}, {SBC, ZPG, 3}, {INC, ZPG, 5}, {ISC, ZPG, 5}, // $E4-$E7
+        {CPX, IMM, 2}, {SBC, IDX, 6}, {NOP, IMM, 2}, {ISB, IDX, 8}, // $E0-$E3
+        {CPX, ZPG, 3}, {SBC, ZPG, 3}, {INC, ZPG, 5}, {ISB, ZPG, 5}, // $E4-$E7
         {INX, IMP, 2}, {SBC, IMM, 2}, {NOP, IMP, 2}, {USB, IMM, 2}, // $E8-$EB
-        {CPX, ABS, 4}, {SBC, ABS, 4}, {INC, ABS, 6}, {ISC, ABS, 6}, // $EC-$EF
-        {BEQ, REL, 2}, {SBC, IDY, 5}, {JAM, IMP, 0}, {ISC, IDY, 8}, // $F0-$F3
-        {NOP, ZPX, 4}, {SBC, ZPX, 4}, {INC, ZPX, 6}, {ISC, ZPX, 6}, // $F4-$F7
-        {SED, IMP, 2}, {SBC, ABY, 4}, {NOP, IMP, 2}, {ISC, ABY, 7}, // $F8-$FB
-        {NOP, ABX, 4}, {SBC, ABX, 4}, {INC, ABX, 7}, {ISC, ABX, 7}, // $FC-$FF
+        {CPX, ABS, 4}, {SBC, ABS, 4}, {INC, ABS, 6}, {ISB, ABS, 6}, // $EC-$EF
+        {BEQ, REL, 2}, {SBC, IDY, 5}, {JAM, IMP, 0}, {ISB, IDY, 8}, // $F0-$F3
+        {NOP, ZPX, 4}, {SBC, ZPX, 4}, {INC, ZPX, 6}, {ISB, ZPX, 6}, // $F4-$F7
+        {SED, IMP, 2}, {SBC, ABY, 4}, {NOP, IMP, 2}, {ISB, ABY, 7}, // $F8-$FB
+        {NOP, ABX, 4}, {SBC, ABX, 4}, {INC, ABX, 7}, {ISB, ABX, 7}, // $FC-$FF
+};
+
+global const char *cpuInstructionCodeNames[CPU_INSTRUCTION_CODE_COUNT] = {
+    // official
+    "ADC", "AND", "ASL", "BCC", "BCS", "BEQ", "BIT", "BMI", "BNE", "BPL", "BRK", "BVC", "BVS", "CLC",
+    "CLD", "CLI", "CLV", "CMP", "CPX", "CPY", "DEC", "DEX", "DEY", "EOR", "INC", "INX", "INY", "JMP",
+    "JSR", "LDA", "LDX", "LDY", "LSR", "NOP", "ORA", "PHA", "PHP", "PLA", "PLP", "ROL", "ROR", "RTI",
+    "RTS", "SBC", "SEC", "SED", "SEI", "STA", "STX", "STY", "TAX", "TAY", "TSX", "TXA", "TXS", "TYA",
+
+    // unofficial
+    "ALR", "ANC", "ANE", "ARR", "DCP", "ISB", "JAM", "LAS", "LAX", "LXA", "RLA", "RRA", "SAX", "SBX",
+    "SHA", "SHX", "SHY", "SLO", "SRE", "TAS", "SBC",
 };
 
 internal int32_t
@@ -100,17 +114,17 @@ branch(Cpu *cpu, uint16_t newAddr)
 }
 
 internal void
-push(Cpu *cpu, uint8_t val)
+push(Cpu *cpu, uint8_t value)
 {
-    mmu_cpu_write(cpu->mmu, CPU_STACK_ADDR_OFFSET + cpu->sp, val);
+    mmu_cpu_write(cpu->mmu, CPU_STACK_ADDR_OFFSET + cpu->sp, value);
     cpu->sp--;
 }
 
 internal void
-push16(Cpu *cpu, uint16_t val)
+push16(Cpu *cpu, uint16_t value)
 {
-    uint8_t hi = (uint8_t)(val >> 8);
-    uint8_t lo = (uint8_t)(val & 0xFF);
+    uint8_t hi = (uint8_t)(value >> 8);
+    uint8_t lo = (uint8_t)(value & 0xFF);
 
     push(cpu, hi);
     push(cpu, lo);
@@ -165,7 +179,7 @@ handle_interrupt(Cpu *cpu)
 }
 
 internal int32_t
-exec_opcode(Cpu *cpu, uint8_t opcode)
+handle_opcode(Cpu *cpu, uint8_t opcode)
 {
     CpuInstructionEncoding enc = instructionEncodings[opcode];
 
@@ -214,7 +228,14 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
         case IDR: {
             uint16_t arg = mmu_cpu_read16(cpu->mmu, cpu->pc);
             cpu->pc += 2;
-            addr = mmu_cpu_read16(cpu->mmu, arg);
+
+            if ((arg & 0x00FF) == 0x00FF) {
+                // HW bug when the page boundary is crossed
+                addr = (uint16_t)((mmu_cpu_read(cpu->mmu, arg & 0xFF00) << 8) | mmu_cpu_read(cpu->mmu, arg));
+            }
+            else {
+                addr = mmu_cpu_read16(cpu->mmu, arg);
+            }
         } break;
         case IDX: {
             uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc++);
@@ -405,7 +426,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
         } break;
         case DEC: {
             uint8_t m = mmu_cpu_read(cpu->mmu, addr);
-            uint8_t r = m - 1;
+            uint8_t r = (uint8_t)(m - 1);
 
             CPU_STATUS_UPDATE(cpu, ZERO, !r);
             CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
@@ -529,11 +550,13 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
                 CPU_STATUS_UPDATE(cpu, ZERO, !r);
                 CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
-                mmu_cpu_write(cpu->mmu, addr, m);
+                mmu_cpu_write(cpu->mmu, addr, r);
             }
         } break;
         case NOP: {
-            // ignore
+            if (pageCrossed) {
+                cycleCount++;
+            }
         } break;
         case ORA: {
             uint8_t m = mmu_cpu_read(cpu->mmu, addr);
@@ -563,9 +586,8 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = r;
         } break;
         case PLP: {
-            cpu->p = pop(cpu);
+            cpu->p = pop(cpu) | UNUSED;
             CPU_STATUS_CLEAR(cpu, BREAK);
-            CPU_STATUS_CLEAR(cpu, UNUSED);
         } break;
         case ROL: {
             if (enc.addrMode == ACC) {
@@ -586,7 +608,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
                 CPU_STATUS_UPDATE(cpu, ZERO, !r);
                 CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
-                mmu_cpu_write(cpu->mmu, addr, m);
+                mmu_cpu_write(cpu->mmu, addr, r);
             }
         } break;
         case ROR: {
@@ -608,14 +630,13 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
                 CPU_STATUS_UPDATE(cpu, ZERO, !r);
                 CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
-                mmu_cpu_write(cpu->mmu, addr, m);
+                mmu_cpu_write(cpu->mmu, addr, r);
             }
         } break;
         case RTI: {
-            cpu->p = pop(cpu);
+            cpu->p = pop(cpu) | UNUSED;
             cpu->pc = pop16(cpu);
             CPU_STATUS_CLEAR(cpu, BREAK);
-            CPU_STATUS_CLEAR(cpu, UNUSED);
         } break;
         case RTS: {
             cpu->pc = pop16(cpu) + 1;
@@ -625,7 +646,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
             uint16_t m = mmu_cpu_read(cpu->mmu, addr);
             uint16_t r = (uint16_t)(a - m - (uint16_t)!CPU_STATUS_GET(cpu, CARRY));
 
-            CPU_STATUS_UPDATE(cpu, CARRY, r & 0xFF00);
+            CPU_STATUS_UPDATE(cpu, CARRY, !(r & 0xFF00));
             CPU_STATUS_UPDATE(cpu, ZERO, !(r & 0xFF));
             CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
             //   A - M = R
@@ -697,10 +718,6 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
         } break;
         case TXS: {
             uint8_t r = cpu->x;
-
-            CPU_STATUS_UPDATE(cpu, ZERO, !r);
-            CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
-
             cpu->sp = r;
         } break;
         case TYA: {
@@ -762,24 +779,26 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = r;
         } break;
         case DCP: {
+            uint8_t a = cpu->a;
             uint8_t m = mmu_cpu_read(cpu->mmu, addr);
             uint8_t r = (uint8_t)(m - 1);
+            uint8_t d = (uint8_t)(a - r);
 
-            CPU_STATUS_UPDATE(cpu, CARRY, cpu->a >= r);
-            CPU_STATUS_UPDATE(cpu, ZERO, cpu->a == r);
-            CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
+            CPU_STATUS_UPDATE(cpu, CARRY, a >= r);
+            CPU_STATUS_UPDATE(cpu, ZERO, a == r);
+            CPU_STATUS_UPDATE(cpu, NEGATIVE, d & NEGATIVE);
 
             mmu_cpu_write(cpu->mmu, addr, r);
         } break;
-        case ISC: {
+        case ISB: {
             uint16_t a = cpu->a;
             uint16_t m = mmu_cpu_read(cpu->mmu, addr);
-            uint16_t m1 = (uint16_t)(m + 1);
+            uint16_t m1 = (uint16_t)((m + 1) & 0xFF);
             uint16_t r = (uint16_t)(a - m1 - (uint16_t)!CPU_STATUS_GET(cpu, CARRY));
 
             CPU_STATUS_UPDATE(cpu, CARRY, !(r & 0xFF00));
             CPU_STATUS_UPDATE(cpu, ZERO, !(r & 0xFF));
-            CPU_STATUS_UPDATE(cpu, NEGATIVE, r & 0x80);
+            CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
             //   A - M = R
             //   +   +   +
             //   +   +   -
@@ -848,6 +867,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
             CPU_STATUS_UPDATE(cpu, ZERO, !r);
             CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
+            mmu_cpu_write(cpu->mmu, addr, m1);
             cpu->a = r;
         } break;
         case RRA: {
@@ -873,6 +893,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
             //   -   -   -
             CPU_STATUS_UPDATE(cpu, OVERFLOW, (a ^ r) & (m1 ^ r) & 0x80);
 
+            mmu_cpu_write(cpu->mmu, addr, (uint8_t)(m1 & 0xFF));
             cpu->a = (uint8_t)(r & 0xFF);
         } break;
         case SAX: {
@@ -924,8 +945,9 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
 
             CPU_STATUS_UPDATE(cpu, CARRY, m & 0x80);
             CPU_STATUS_UPDATE(cpu, ZERO, !r);
-            CPU_STATUS_UPDATE(cpu, NEGATIVE, m & NEGATIVE);
+            CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
+            mmu_cpu_write(cpu->mmu, addr, m1);
             cpu->a = r;
         } break;
         case SRE: {
@@ -936,8 +958,9 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
 
             CPU_STATUS_UPDATE(cpu, CARRY, m & 1);
             CPU_STATUS_UPDATE(cpu, ZERO, !r);
-            CPU_STATUS_UPDATE(cpu, NEGATIVE, m & NEGATIVE);
+            CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
+            mmu_cpu_write(cpu->mmu, addr, m1);
             cpu->a = r;
         } break;
         case TAS: {
@@ -955,7 +978,7 @@ exec_opcode(Cpu *cpu, uint8_t opcode)
             uint16_t m = mmu_cpu_read(cpu->mmu, addr);
             uint16_t r = (uint16_t)(a - m - (uint16_t)!CPU_STATUS_GET(cpu, CARRY));
 
-            CPU_STATUS_UPDATE(cpu, CARRY, r & 0xFF00);
+            CPU_STATUS_UPDATE(cpu, CARRY, !(r & 0xFF00));
             CPU_STATUS_UPDATE(cpu, ZERO, !(r & 0xFF));
             CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
             //   A - M = R
@@ -985,7 +1008,7 @@ cpu_init(Cpu *cpu)
     cpu->a = 0;
     cpu->x = 0;
     cpu->y = 0;
-    cpu->p = 0 | INTERRUPT_INHIBIT;
+    cpu->p = 0 | INTERRUPT_INHIBIT | UNUSED;
     cpu->interrupt = NOI;
     cpu->cyclesCount = 0;
     cpu->pendingCycleCount = 0;
@@ -1005,16 +1028,113 @@ cpu_tick(Cpu *cpu)
         }
         else {
             uint8_t opcode = mmu_cpu_read(cpu->mmu, cpu->pc++);
-            cpu->pendingCycleCount = exec_opcode(cpu, opcode);
+            cpu->pendingCycleCount = handle_opcode(cpu, opcode);
         }
+        cpu->cyclesCount += cpu->pendingCycleCount;
     }
     cpu->pendingCycleCount--;
-    cpu->cyclesCount++;
 }
 
-void cpu_interrupt(Cpu *cpu, CpuInterruptType interrupt)
+void
+cpu_interrupt(Cpu *cpu, CpuInterruptType interrupt)
 {
     if ((interrupt != IRQ) || !CPU_STATUS_GET(cpu, INTERRUPT_INHIBIT)) {
         cpu->interrupt = interrupt;
     }
+}
+
+Str8
+cpu_sprint(Arena *arena, Cpu *cpu)
+{
+    uint16_t addr = cpu->pc;
+    uint8_t opcode = mmu_cpu_read(cpu->mmu, addr++);
+    CpuInstructionEncoding enc = instructionEncodings[opcode];
+    char *fmt = NULL;
+    const char *codeName = cpuInstructionCodeNames[enc.code];
+    uint32_t arg = 0xFFFFFFFF;
+    switch (enc.addrMode) {
+        case IMP: {
+            fmt = "%04X  %s          A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ACC: {
+            fmt = "%04X  %s A        A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case IMM: {
+            arg = mmu_cpu_read(cpu->mmu, addr);
+            fmt = "%04X  %s #$%02X     A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ZPG: {
+            arg = mmu_cpu_read(cpu->mmu, addr);
+            fmt = "%04X  %s $%02X      A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ZPX: {
+            arg = mmu_cpu_read(cpu->mmu, addr);
+            fmt = "%04X  %s $%02X,X    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ZPY: {
+            arg = mmu_cpu_read(cpu->mmu, addr);
+            fmt = "%04X  %s $%02X,Y    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case REL: {
+            uint8_t tmp = mmu_cpu_read(cpu->mmu, addr);
+            int32_t offset = (int32_t)(*((int8_t *)&tmp));
+            arg = (uint16_t)((int32_t)(addr + 1) + offset);
+            fmt = "%04X  %s $%04X    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ABS: {
+            arg = mmu_cpu_read16(cpu->mmu, addr);
+            fmt = "%04X  %s $%04X    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ABX: {
+            arg = mmu_cpu_read16(cpu->mmu, addr);
+            fmt = "%04X  %s $%04X,X  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case ABY: {
+            arg = mmu_cpu_read16(cpu->mmu, addr);
+            fmt = "%04X  %s $%04X,Y  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case IDR: {
+            arg = mmu_cpu_read16(cpu->mmu, addr);
+            fmt = "%04X  %s ($%04X)  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case IDX: {
+            arg = mmu_cpu_read(cpu->mmu, addr);
+            fmt = "%04X  %s ($%02X,X)  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        case IDY: {
+            arg = mmu_cpu_read(cpu->mmu, addr);
+            fmt = "%04X  %s ($%02X),Y  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+        } break;
+        default: {
+            UNREACHABLE();
+        }
+    }
+
+    if (arg == 0xFFFFFFFF) {
+        return str8_sprintf(
+           arena,
+           fmt,
+           cpu->pc,
+           codeName,
+           cpu->a,
+           cpu->x,
+           cpu->y,
+           cpu->p,
+           cpu->sp,
+           cpu->cyclesCount
+       );
+    }
+    return str8_sprintf(
+        arena,
+        fmt,
+        cpu->pc,
+        codeName,
+        arg,
+        cpu->a,
+        cpu->x,
+        cpu->y,
+        cpu->p,
+        cpu->sp,
+        cpu->cyclesCount
+    );
 }

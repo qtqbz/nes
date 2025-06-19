@@ -103,3 +103,34 @@ bool rom_load(Arena *arena, Rom *rom, Str8 path)
 
     return true;
 }
+
+uint8_t
+rom_read(Rom *rom, uint16_t addr)
+{
+    uint8_t result = 0;
+    switch (rom->mapper) {
+        case NROM: {
+            if (0x6000 <= addr && addr <= 0x7FFF) {
+                // RAM
+            }
+            else if (0x8000 <= addr && addr <= 0xBFFF) {
+                // ROM 1
+                result = rom->prg[addr - 0x8000];
+            }
+            else {
+                // ROM 2
+                result = rom->prg[addr - 0xC000];
+            }
+        } break;
+        default: {
+            UNREACHABLE();
+        }
+    }
+    return result;
+}
+
+void
+rom_write(Rom *rom, uint16_t addr, uint8_t value)
+{
+
+}
