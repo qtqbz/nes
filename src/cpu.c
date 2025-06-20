@@ -1046,90 +1046,97 @@ cpu_interrupt(Cpu *cpu, CpuInterruptType interrupt)
 Str8
 cpu_sprint(Arena *arena, Cpu *cpu)
 {
-    uint16_t addr = cpu->pc;
-    uint8_t opcode = mmu_cpu_read(cpu->mmu, addr++);
+    uint8_t opcode = mmu_cpu_read(cpu->mmu, cpu->pc);
     CpuInstructionEncoding enc = instructionEncodings[opcode];
-    char *fmt = NULL;
     const char *codeName = cpuInstructionCodeNames[enc.code];
-    uint32_t arg = 0xFFFFFFFF;
+
+    Str8List list = {};
+
+    str8_list_appendf(arena, &list, "%04X", cpu->pc);
+
     switch (enc.addrMode) {
         case IMP: {
-            fmt = "%04X  %s          A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            str8_list_appendf(arena, &list, "%02X      ", opcode);
+            str8_list_appendf(arena, &list, "%s        ", codeName);
         } break;
         case ACC: {
-            fmt = "%04X  %s A        A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            str8_list_appendf(arena, &list, "%02X      ", opcode);
+            str8_list_appendf(arena, &list, "%s A      ", codeName);
         } break;
         case IMM: {
-            arg = mmu_cpu_read(cpu->mmu, addr);
-            fmt = "%04X  %s #$%02X     A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, arg);
+            str8_list_appendf(arena, &list, "%s #$%02X   ", codeName, arg);
         } break;
         case ZPG: {
-            arg = mmu_cpu_read(cpu->mmu, addr);
-            fmt = "%04X  %s $%02X      A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, arg);
+            str8_list_appendf(arena, &list, "%s $%02X    ", codeName, arg);
         } break;
         case ZPX: {
-            arg = mmu_cpu_read(cpu->mmu, addr);
-            fmt = "%04X  %s $%02X,X    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, arg);
+            str8_list_appendf(arena, &list, "%s $%02X,X  ", codeName, arg);
         } break;
         case ZPY: {
-            arg = mmu_cpu_read(cpu->mmu, addr);
-            fmt = "%04X  %s $%02X,Y    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, arg);
+            str8_list_appendf(arena, &list, "%s $%02X,Y  ", codeName, arg);
         } break;
         case REL: {
-            uint8_t tmp = mmu_cpu_read(cpu->mmu, addr);
-            int32_t offset = (int32_t)(*((int8_t *)&tmp));
-            arg = (uint16_t)((int32_t)(addr + 1) + offset);
-            fmt = "%04X  %s $%04X    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t rawOffset = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            int32_t offset = (int32_t)(*((int8_t *)&rawOffset));
+            uint16_t arg = (uint16_t)((int32_t)(cpu->pc + 2) + offset);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, rawOffset);
+            str8_list_appendf(arena, &list, "%s $%04X  ", codeName, arg);
         } break;
         case ABS: {
-            arg = mmu_cpu_read16(cpu->mmu, addr);
-            fmt = "%04X  %s $%04X    A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t lo = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            uint8_t hi = mmu_cpu_read(cpu->mmu, cpu->pc + 2);
+            uint16_t arg = (uint16_t)((hi << 8) | lo);
+            str8_list_appendf(arena, &list, "%02X %02X %02X", opcode, lo, hi);
+            str8_list_appendf(arena, &list, "%s $%04X  ", codeName, arg);
         } break;
         case ABX: {
-            arg = mmu_cpu_read16(cpu->mmu, addr);
-            fmt = "%04X  %s $%04X,X  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t lo = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            uint8_t hi = mmu_cpu_read(cpu->mmu, cpu->pc + 2);
+            uint16_t arg = (uint16_t)((hi << 8) | lo);
+            str8_list_appendf(arena, &list, "%02X %02X %02X", opcode, lo, hi);
+            str8_list_appendf(arena, &list, "%s $%04X,X", codeName, arg);
         } break;
         case ABY: {
-            arg = mmu_cpu_read16(cpu->mmu, addr);
-            fmt = "%04X  %s $%04X,Y  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t lo = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            uint8_t hi = mmu_cpu_read(cpu->mmu, cpu->pc + 2);
+            uint16_t arg = (uint16_t)((hi << 8) | lo);
+            str8_list_appendf(arena, &list, "%02X %02X %02X", opcode, lo, hi);
+            str8_list_appendf(arena, &list, "%s $%04X,Y", codeName, arg);
         } break;
         case IDR: {
-            arg = mmu_cpu_read16(cpu->mmu, addr);
-            fmt = "%04X  %s ($%04X)  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t lo = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            uint8_t hi = mmu_cpu_read(cpu->mmu, cpu->pc + 2);
+            uint16_t arg = (uint16_t)((hi << 8) | lo);
+            str8_list_appendf(arena, &list, "%02X %02X %02X", opcode, lo, hi);
+            str8_list_appendf(arena, &list, "%s ($%04X)", codeName, arg);
         } break;
         case IDX: {
-            arg = mmu_cpu_read(cpu->mmu, addr);
-            fmt = "%04X  %s ($%02X,X)  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, arg);
+            str8_list_appendf(arena, &list, "%s ($%02X,X)", codeName, arg);
         } break;
         case IDY: {
-            arg = mmu_cpu_read(cpu->mmu, addr);
-            fmt = "%04X  %s ($%02X),Y  A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu";
+            uint8_t arg = mmu_cpu_read(cpu->mmu, cpu->pc + 1);
+            str8_list_appendf(arena, &list, "%02X %02X   ", opcode, arg);
+            str8_list_appendf(arena, &list, "%s ($%02X),Y", codeName, arg);
         } break;
         default: {
             UNREACHABLE();
         }
     }
 
-    if (arg == 0xFFFFFFFF) {
-        return str8_sprintf(
-           arena,
-           fmt,
-           cpu->pc,
-           codeName,
-           cpu->a,
-           cpu->x,
-           cpu->y,
-           cpu->p,
-           cpu->sp,
-           cpu->cyclesCount
-       );
-    }
-    return str8_sprintf(
+    str8_list_appendf(
         arena,
-        fmt,
-        cpu->pc,
-        codeName,
-        arg,
+        &list,
+        "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%lu",
         cpu->a,
         cpu->x,
         cpu->y,
@@ -1137,4 +1144,6 @@ cpu_sprint(Arena *arena, Cpu *cpu)
         cpu->sp,
         cpu->cyclesCount
     );
+
+    return str8_list_join(arena, list, '\t');
 }
