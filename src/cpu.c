@@ -147,7 +147,7 @@ pop16(Cpu *cpu)
     return result;
 }
 
-internal uint8_t
+internal uint32_t
 handle_interrupt(Cpu *cpu)
 {
     push16(cpu, cpu->pc);
@@ -178,12 +178,12 @@ handle_interrupt(Cpu *cpu)
     return 7;
 }
 
-internal int32_t
+internal uint32_t
 handle_opcode(Cpu *cpu, uint8_t opcode)
 {
     CpuInstructionEncoding enc = instructionEncodings[opcode];
 
-    int32_t cycleCount = enc.baseCyclesCount;
+    uint32_t cyclesCount = enc.baseCyclesCount;
     uint16_t addr = 0;
     bool pageCrossed = false;
     switch (enc.addrMode) {
@@ -290,7 +290,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = (uint8_t)(r & 0xFF);
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case AND: {
@@ -303,7 +303,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = r;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case ASL: {
@@ -330,17 +330,17 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
         } break;
         case BCC: {
             if (!CPU_STATUS_GET(cpu, CARRY)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BCS: {
             if (CPU_STATUS_GET(cpu, CARRY)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BEQ: {
             if (CPU_STATUS_GET(cpu, ZERO)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BIT: {
@@ -353,17 +353,17 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
         } break;
         case BMI: {
             if (CPU_STATUS_GET(cpu, NEGATIVE)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BNE: {
             if (!CPU_STATUS_GET(cpu, ZERO)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BPL: {
             if (!CPU_STATUS_GET(cpu, NEGATIVE)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BRK: {
@@ -376,12 +376,12 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
         } break;
         case BVC: {
             if (!CPU_STATUS_GET(cpu, OVERFLOW)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case BVS: {
             if (CPU_STATUS_GET(cpu, OVERFLOW)) {
-                cycleCount += branch(cpu, addr);
+                cyclesCount += branch(cpu, addr);
             }
         } break;
         case CLC: {
@@ -405,7 +405,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             CPU_STATUS_UPDATE(cpu, NEGATIVE, r & NEGATIVE);
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case CPX: {
@@ -460,7 +460,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = r;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case INC: {
@@ -504,7 +504,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = m;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case LDX: {
@@ -516,7 +516,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->x = m;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case LDY: {
@@ -528,7 +528,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->y = m;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case LSR: {
@@ -555,7 +555,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
         } break;
         case NOP: {
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case ORA: {
@@ -568,7 +568,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = r;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case PHA: {
@@ -663,7 +663,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = (uint8_t)(r & 0xFF);
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case SEC: {
@@ -814,7 +814,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = (uint8_t)(r & 0xFF);
         } break;
         case JAM: {
-            // ignore
+            cpu->isJammed = true;
         } break;
         case LAS: {
             uint8_t sp = cpu->sp;
@@ -827,7 +827,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->sp = cpu->a = cpu->x = r;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case LAX: {
@@ -839,7 +839,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = cpu->x = m;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case LXA: {
@@ -854,7 +854,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
             cpu->a = cpu->x = r;
 
             if (pageCrossed) {
-                cycleCount++;
+                cyclesCount++;
             }
         } break;
         case RLA: {
@@ -999,7 +999,7 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
         }
     }
 
-    return cycleCount;
+    return cyclesCount;
 }
 
 bool
@@ -1011,7 +1011,8 @@ cpu_init(Cpu *cpu)
     cpu->p = 0 | INTERRUPT_INHIBIT | UNUSED;
     cpu->interrupt = NOI;
     cpu->cyclesCount = 0;
-    cpu->pendingCycleCount = 0;
+    cpu->pendingCyclesCount = 0;
+    cpu->isJammed = false;
 
     cpu->pc = mmu_cpu_read16(cpu->mmu, CPU_RES_ADDR_LO);
     cpu->sp = 0xFD; // As if the stack was initialized to $00, and then a RESET was performed (e.g. $00 - 3 = $FD).
@@ -1022,22 +1023,28 @@ cpu_init(Cpu *cpu)
 void
 cpu_tick(Cpu *cpu)
 {
-    if (cpu->pendingCycleCount == 0) {
+    if (cpu->isJammed) {
+        return;
+    }
+    if (cpu->pendingCyclesCount == 0) {
         if (cpu->interrupt != NOI) {
-            cpu->pendingCycleCount = handle_interrupt(cpu);
+            cpu->pendingCyclesCount = handle_interrupt(cpu);
         }
         else {
             uint8_t opcode = mmu_cpu_read(cpu->mmu, cpu->pc++);
-            cpu->pendingCycleCount = handle_opcode(cpu, opcode);
+            cpu->pendingCyclesCount = handle_opcode(cpu, opcode);
         }
-        cpu->cyclesCount += cpu->pendingCycleCount;
+        cpu->cyclesCount += cpu->pendingCyclesCount;
     }
-    cpu->pendingCycleCount--;
+    cpu->pendingCyclesCount--;
 }
 
 void
 cpu_interrupt(Cpu *cpu, CpuInterruptType interrupt)
 {
+    if (cpu->isJammed) {
+        return;
+    }
     if ((interrupt != IRQ) || !CPU_STATUS_GET(cpu, INTERRUPT_INHIBIT)) {
         cpu->interrupt = interrupt;
     }
