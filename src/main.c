@@ -125,7 +125,7 @@ main(int32_t argc, char *argv[])
         SDL_RenderTexture(sdl.renderer, sdl.buffer, NULL, NULL);
         SDL_RenderPresent(sdl.renderer);
 
-        uint64_t endMs = SDL_GetTicks();
+        quit = nes.cpu.isJammed;
 
         uint64_t durationMs = endMs - startMs;
         if (durationMs < targetFrameDurationMs) {

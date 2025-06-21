@@ -45,7 +45,8 @@ struct Cpu
 
     CpuInterruptType interrupt;
     uint64_t cyclesCount;
-    uint64_t pendingCycleCount;
+    uint64_t pendingCyclesCount;
+    bool isJammed;
 };
 
 typedef int32_t CpuInstructionCode;
