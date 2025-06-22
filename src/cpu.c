@@ -1032,9 +1032,9 @@ cpu_tick(Cpu *cpu)
             uint8_t opcode = mmu_cpu_read(cpu->mmu, cpu->pc++);
             cpu->pendingCyclesCount = handle_opcode(cpu, opcode);
         }
-        cpu->cyclesCount += cpu->pendingCyclesCount;
     }
     cpu->pendingCyclesCount--;
+    cpu->cyclesCount++;
 }
 
 void
