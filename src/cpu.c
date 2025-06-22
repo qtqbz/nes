@@ -155,23 +155,20 @@ handle_interrupt(Cpu *cpu)
 
     CPU_STATUS_SET(cpu, INTERRUPT_INHIBIT);
 
-    uint16_t addr;
     switch (cpu->interrupt) {
         case RES: {
-            cpu->sp -= 3;
-            addr = CPU_RES_ADDR_LO;
+            cpu->pc = mmu_cpu_read16(cpu->mmu, CPU_RES_ADDR_LO);
         } break;
         case NMI: {
-            addr = CPU_NMI_ADDR_LO;
+            cpu->pc = mmu_cpu_read16(cpu->mmu, CPU_NMI_ADDR_LO);
         } break;
         case IRQ: {
-            addr = CPU_IRQ_ADDR_LO;
+            cpu->pc = mmu_cpu_read16(cpu->mmu, CPU_IRQ_ADDR_LO);
         } break;
         default: {
             UNREACHABLE();
         }
     }
-    cpu->pc = mmu_cpu_read16(cpu->mmu, addr);
 
     cpu->interrupt = NOI;
 
@@ -1005,17 +1002,18 @@ handle_opcode(Cpu *cpu, uint8_t opcode)
 bool
 cpu_init(Cpu *cpu)
 {
+    cpu->pc = 0;
     cpu->a = 0;
     cpu->x = 0;
     cpu->y = 0;
-    cpu->p = 0 | INTERRUPT_INHIBIT | UNUSED;
-    cpu->interrupt = NOI;
+    cpu->p = 0 | UNUSED;
+    cpu->sp = 0;
     cpu->cyclesCount = 0;
-    cpu->pendingCyclesCount = 0;
     cpu->isJammed = false;
 
-    cpu->pc = mmu_cpu_read16(cpu->mmu, CPU_RES_ADDR_LO);
-    cpu->sp = 0xFD; // As if the stack was initialized to $00, and then a RESET was performed (e.g. $00 - 3 = $FD).
+    // RESET
+    cpu->interrupt = RES;
+    cpu->pendingCyclesCount = handle_interrupt(cpu);
 
     return true;
 }
