@@ -19,39 +19,45 @@ struct SdlResources
 };
 
 internal void
-sdl_abort_on_error(int32_t result)
+sdl_abort()
 {
-    if (result < 0) {
-        fprintf(stderr, "SDL ERROR: %s\n", SDL_GetError());
-        exit(1);
+    fprintf(stderr, "SDL ERROR: %s\n", SDL_GetError());
+    exit(1);
+}
+
+internal bool
+sdl_abort_if_failed(bool isSuccess)
+{
+    if (!isSuccess) {
+        sdl_abort();
     }
+    return isSuccess;
 }
 
 internal void *
-sdl_abort_on_null(void *p)
+sdl_abort_if_null(void *pointer)
 {
-    if (p == NULL) {
-        fprintf(stderr, "SDL ERROR: %s\n", SDL_GetError());
-        exit(1);
+    if (pointer == NULL) {
+        sdl_abort();
     }
-    return p;
+    return pointer;
 }
 
 internal SdlResources
 sdl_create()
 {
-    sdl_abort_on_error(SDL_Init(SDL_INIT_VIDEO));
+    sdl_abort_if_failed(SDL_Init(SDL_INIT_VIDEO));
 
-    SDL_Window *window = (SDL_Window *)sdl_abort_on_null(SDL_CreateWindow("nes emulator by qtqbz",
+    SDL_Window *window = (SDL_Window *)sdl_abort_if_null(SDL_CreateWindow("nes emulator by qtqbz",
                                                                           NES_DISPLAY_WIDTH_PX,
                                                                           NES_DISPLAY_HEIGHT_PX,
                                                                           SDL_WINDOW_RESIZABLE));
 
-    SDL_Renderer *renderer = (SDL_Renderer *)sdl_abort_on_null(SDL_CreateRenderer(window, NULL));
+    SDL_Renderer *renderer = (SDL_Renderer *)sdl_abort_if_null(SDL_CreateRenderer(window, NULL));
 
-    sdl_abort_on_error(SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND));
+    sdl_abort_if_failed(SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND));
 
-    SDL_Texture *buffer = (SDL_Texture *)sdl_abort_on_null(SDL_CreateTexture(renderer,
+    SDL_Texture *buffer = (SDL_Texture *)sdl_abort_if_null(SDL_CreateTexture(renderer,
                                                                              SDL_PIXELFORMAT_RGBA8888,
                                                                              SDL_TEXTUREACCESS_STREAMING,
                                                                              NES_DISPLAY_WIDTH_PX,
@@ -113,7 +119,7 @@ main(int32_t argc, char *argv[])
 
         uint32_t *pixels;
         int32_t pitch;
-        sdl_abort_on_error(SDL_LockTexture(sdl.buffer, NULL, (void **)&pixels, &pitch));
+        sdl_abort_if_failed(SDL_LockTexture(sdl.buffer, NULL, (void **)&pixels, &pitch));
 
         ArenaBackup arenaBck = arena_backup(&permArena);
         nes_display_update(arenaBck.arena, &nes, pixels);
